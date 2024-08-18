@@ -1,0 +1,1 @@
+要启动项目请参照/src/main/resources/application-base.yaml文件修改相应的配置后在同目录下生成application.yaml
