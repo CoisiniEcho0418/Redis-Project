@@ -16,6 +16,7 @@ import com.hmdp.dto.Result;
 import com.hmdp.entity.ShopType;
 import com.hmdp.mapper.ShopTypeMapper;
 import com.hmdp.service.IShopTypeService;
+import com.hmdp.utils.RandomExpireTimeUtil;
 import com.hmdp.utils.RedisConstants;
 
 import cn.hutool.json.JSONUtil;
@@ -53,8 +54,8 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
         // 3.写回Redis并设置过期时间
         shopTypeList.forEach(shopType -> stringRedisTemplate.opsForList().rightPush(RedisConstants.CACHE_SHOPTYPE_KEY,
             JSONUtil.toJsonStr(shopType)));
-        stringRedisTemplate.expire(RedisConstants.CACHE_SHOPTYPE_KEY, RedisConstants.CACHE_SHOPTYPE_TTL,
-            TimeUnit.HOURS);
+        stringRedisTemplate.expire(RedisConstants.CACHE_SHOPTYPE_KEY,
+            RandomExpireTimeUtil.getRandomExpire(RedisConstants.CACHE_SHOPTYPE_TTL), TimeUnit.HOURS);
         return Result.ok(shopTypeList);
     }
 }

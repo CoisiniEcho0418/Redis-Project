@@ -17,6 +17,7 @@ import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
+import com.hmdp.utils.RandomExpireTimeUtil;
 import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.RegexUtils;
 import com.hmdp.utils.SystemConstants;
@@ -57,7 +58,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         // 3.保存到Redis
         stringRedisTemplate.opsForValue().set(RedisConstants.LOGIN_CODE_KEY + phone, code,
-            RedisConstants.LOGIN_CODE_TTL, TimeUnit.MINUTES);
+            RandomExpireTimeUtil.getRandomExpire(RedisConstants.LOGIN_CODE_TTL), TimeUnit.MINUTES);
         // 4.发送验证码
         log.debug("验证码发送成功:{}", code);
         return Result.ok();
