@@ -1,5 +1,7 @@
 package com.hmdp.service.impl;
 
+import static com.hmdp.utils.RedisConstants.*;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +20,6 @@ import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.RandomExpireTimeUtil;
-import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.RegexUtils;
 import com.hmdp.utils.SystemConstants;
 
@@ -57,8 +58,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         session.setAttribute("code",code);*/
 
         // 3.保存到Redis
-        stringRedisTemplate.opsForValue().set(RedisConstants.LOGIN_CODE_KEY + phone, code,
-            RandomExpireTimeUtil.getRandomExpire(RedisConstants.LOGIN_CODE_TTL), TimeUnit.MINUTES);
+        stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone, code,
+            RandomExpireTimeUtil.getRandomExpire(LOGIN_CODE_TTL), TimeUnit.MINUTES);
         // 4.发送验证码
         log.debug("验证码发送成功:{}", code);
         return Result.ok();
@@ -73,7 +74,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         }
         // 2.校验手机号和验证码
         // String code = (String)session.getAttribute("code");
-        String code = stringRedisTemplate.opsForValue().get(RedisConstants.LOGIN_CODE_KEY + phone);
+        String code = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
         if (!code.equals(loginForm.getCode())) {
             return Result.fail("验证码错误！");
         }
@@ -93,9 +94,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
         Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(), CopyOptions.create()
             .setIgnoreNullValue(true).setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
-        String loginToken = RedisConstants.LOGIN_USER_KEY + token;
+        String loginToken = LOGIN_USER_KEY + token;
         stringRedisTemplate.opsForHash().putAll(loginToken, userMap);
-        stringRedisTemplate.expire(loginToken, RedisConstants.LOGIN_USER_TTL, TimeUnit.MINUTES);
+        stringRedisTemplate.expire(loginToken, LOGIN_USER_TTL, TimeUnit.MINUTES);
         // 返回token
         return Result.ok(token);
 
