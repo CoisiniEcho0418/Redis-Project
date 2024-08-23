@@ -49,18 +49,18 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
     @Override
     public Result queryById(Long id) {
-        /*// 缓存穿透
+        // 缓存穿透
         // Shop shop = queryByIdWithPassThrough(id);
         Shop shop = cacheClient.queryByIdWithPassThrough(id, Shop.class, this::getById, CACHE_SHOP_KEY, CACHE_SHOP_TTL,
-                TimeUnit.MINUTES);*/
+            TimeUnit.MINUTES);
 
         /*// 互斥锁解决缓存击穿
         Shop shop = queryByIdWithMutex(id);*/
 
-        // 逻辑过期时间解决缓存击穿
+        /*// 逻辑过期时间解决缓存击穿
         // Shop shop = queryByIdWithLogicalExpire(id);
         Shop shop = cacheClient.queryByIdWithLogicalExpire(id, Shop.class, this::getById, CACHE_SHOP_KEY,
-            CACHE_SHOP_TTL, TimeUnit.MINUTES);
+            CACHE_SHOP_TTL, TimeUnit.MINUTES);*/
         if (shop == null) {
             return Result.fail("店铺信息不存在！");
         }
@@ -205,7 +205,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     }
 
     // 给要缓存的对象封装成带逻辑过期时间的RedisData，并存到Redis中（针对热点key，所以不考虑查不到数据的情况）
-    private void savaRedisData(Long id, Long seconds) {
+    public void savaRedisData(Long id, Long seconds) {
         Shop shop = getById(id);
         String key = CACHE_SHOP_KEY + id;
         RedisData redisData = new RedisData();

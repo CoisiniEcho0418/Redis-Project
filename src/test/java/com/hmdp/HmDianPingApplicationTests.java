@@ -9,6 +9,7 @@ import javax.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.hmdp.service.impl.ShopServiceImpl;
 import com.hmdp.utils.RedisGlobalIdGenerator;
 
 @SpringBootTest
@@ -16,6 +17,10 @@ class HmDianPingApplicationTests {
 
     @Resource
     private RedisGlobalIdGenerator redisGlobalIdGenerator;
+
+    @Resource
+    private ShopServiceImpl shopService;
+
     private ExecutorService es = Executors.newFixedThreadPool(500);
 
     @Test
@@ -35,6 +40,11 @@ class HmDianPingApplicationTests {
         countDownLatch.await();
         long end = System.currentTimeMillis();
         System.out.println("time:" + (end - begin));
+    }
+
+    @Test
+    void testsavaRedisData() {
+        shopService.savaRedisData(1L, 100L);
     }
 
 }

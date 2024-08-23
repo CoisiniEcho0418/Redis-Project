@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 /**
  * @author hwj
  * @create: 2024-08-19 22:01
- * @Description:
+ * @Description: 全局ID生成器
  */
 @Component
 public class RedisGlobalIdGenerator {
@@ -20,7 +20,7 @@ public class RedisGlobalIdGenerator {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
-    // 开始时间戳
+    // 开始时间戳（开始时间：2024-01-01 00:00:00）
     private static final long BEGIN_TIMESTAMP = 1704067200L;
     // 序列号位数
     private static final int COUNT_BITS = 32;

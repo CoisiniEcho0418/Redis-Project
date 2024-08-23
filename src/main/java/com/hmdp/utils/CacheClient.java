@@ -31,6 +31,7 @@ public class CacheClient {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    // TODO 修改线程池用法
     private ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
 
     // 将任意Java对象序列化为json并存储在string类型的key中，并且可以设置TTL过期时间
