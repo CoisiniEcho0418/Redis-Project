@@ -1,5 +1,8 @@
 package com.hmdp.Interceptor;
 
+import static com.hmdp.utils.RedisConstants.LOGIN_USER_KEY;
+import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
+
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -10,7 +13,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import com.hmdp.dto.UserDTO;
-import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.UserHolder;
 
 import cn.hutool.core.bean.BeanUtil;
@@ -34,7 +36,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
         // 1.获取token
         String token = request.getHeader("Authorization");
         // 2.从Redis中获取用户
-        String loginToken = RedisConstants.LOGIN_USER_KEY + token;
+        String loginToken = LOGIN_USER_KEY + token;
         Map<Object, Object> userMap = stringRedisTemplate.opsForHash().entries(loginToken);
         // 3.判断用户是否存在
         if (CollectionUtil.isEmpty(userMap)) {
@@ -45,7 +47,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
         UserDTO userDTO = BeanUtil.fillBeanWithMap(userMap, new UserDTO(), false);
         UserHolder.saveUser(userDTO);
         // 5.刷新token有效期
-        stringRedisTemplate.expire(loginToken, RedisConstants.LOGIN_USER_TTL, TimeUnit.MINUTES);
+        stringRedisTemplate.expire(loginToken, LOGIN_USER_TTL, TimeUnit.MINUTES);
         return true;
     }
 }

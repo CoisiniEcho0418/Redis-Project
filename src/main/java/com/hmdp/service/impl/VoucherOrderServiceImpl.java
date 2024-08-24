@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.Result;
+import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.VoucherOrder;
 import com.hmdp.mapper.VoucherOrderMapper;
 import com.hmdp.service.ISeckillVoucherService;
@@ -31,6 +32,7 @@ import com.hmdp.utils.UserHolder;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.ObjectUtil;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -142,7 +144,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     log.error("处理pending-list订单异常", e);
                     // 休眠一段时间之后 continue（继续尝试处理）
                     try {
-                        Thread.sleep(200);
+                        Thread.sleep(500);
                     } catch (InterruptedException ex) {
                         throw new RuntimeException(ex);
                     }
@@ -183,7 +185,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     public Result seckillVoucher(Long voucherId) {
         // 1.从 Redis查询用户购买资格
         // 获取用户ID 和 订单 ID
-        Long userId = UserHolder.getUser().getId();
+        UserDTO userDTO = UserHolder.getUser();
+        if (ObjectUtil.isEmpty(userDTO)) {
+            // 用户未登录，不做处理
+            return Result.fail("用户未登录！");
+        }
+        Long userId = userDTO.getId();
         long orderId = redisGlobalIdGenerator.nextId("order");
         // 调用 lua 脚本判断秒杀库存和校验一人一单（用 REDIS STREAM 版本的消息队列来代替阻塞队列）
         Long result = stringRedisTemplate.execute(SECKILL_SCRIPT, Collections.emptyList(), voucherId.toString(),
@@ -205,7 +212,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     // public Result seckillVoucher(Long voucherId) {
     // // 1.从 Redis查询用户购买资格
     // // 获取用户ID
-    // Long userId = UserHolder.getUser().getId();
+    // UserDTO userDTO = UserHolder.getUser();
+    // if (ObjectUtil.isEmpty(userDTO)) {
+    // // 用户未登录，不做处理
+    // return Result.fail("用户未登录！");
+    // }
+    // Long userId = userDTO.getId();
     // // 调用 lua 脚本判断秒杀库存和校验一人一单
     // Long result = stringRedisTemplate.execute(SECKILL_SCRIPT, Collections.emptyList(), voucherId.toString(),
     // userId.toString());
@@ -237,7 +249,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     // SeckillVoucher seckillVoucher = seckillVoucherService.getById(voucherId);
     //
     // // 2.判断秒杀是否开始
-    // if (ObjectUtil.isNull(seckillVoucher)) {
+    // if (ObjectUtil.isEmpty(seckillVoucher)) {
     // return Result.fail("优惠券不存在！");
     // }
     // // 判断开始时间
@@ -255,7 +267,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     // }
     //
     // // 4.一人一单判断
-    // Long userId = UserHolder.getUser().getId();
+    // UserDTO userDTO = UserHolder.getUser();
+    // if (ObjectUtil.isEmpty(userDTO)) {
+    // // 用户未登录，不做处理
+    // return Result.fail("用户未登录！");
+    // }
+    // Long userId = userDTO.getId();
     //
     // /*// userId.toString().intern() 保证只要用户id的值一样就是同样的对象，得到的锁就一样，
     // // 这样不会导致同一用户多次请求得到不同的锁，导致锁失效。同时锁加在这里是为了防止加在

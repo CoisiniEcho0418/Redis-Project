@@ -28,6 +28,7 @@ import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -72,34 +73,60 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if (RegexUtils.isPhoneInvalid(phone)) {
             return Result.fail("Invalid phone number.");
         }
-        // 2.校验手机号和验证码
-        // String code = (String)session.getAttribute("code");
-        String code = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
-        if (!code.equals(loginForm.getCode())) {
-            return Result.fail("验证码错误！");
+        // 判断是手机号登录还是密码登录
+        if (StrUtil.isNotEmpty(loginForm.getCode())) {
+            // 2.校验手机号和验证码
+            // String code = (String)session.getAttribute("code");
+            String code = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
+            if (!code.equals(loginForm.getCode())) {
+                return Result.fail("验证码错误！");
+            }
+            // 3.根据手机号查询用户是否存在
+            User user = query().eq("phone", phone).one();
+            if (ObjectUtil.isEmpty(user)) {
+                // 用户不存在则创建新用户
+                System.out.println("创建新用户");
+                user = createWithPhone(phone);
+            }
+
+            /*// 4.保存用户信息到session
+            session.setAttribute("user",user);*/
+
+            // 4.保存用户信息到Redis（要生成token作为key）
+            String token = UUID.randomUUID().toString();
+            UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+            Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(), CopyOptions.create()
+                .setIgnoreNullValue(true).setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
+            String loginToken = LOGIN_USER_KEY + token;
+            stringRedisTemplate.opsForHash().putAll(loginToken, userMap);
+            stringRedisTemplate.expire(loginToken, LOGIN_USER_TTL, TimeUnit.MINUTES);
+            // 返回token
+            return Result.ok(token);
+        } else if (StrUtil.isNotEmpty(loginForm.getPassword())) {
+            // 根据手机号查询用户是否存在
+            User user = query().eq("phone", phone).one();
+            if (ObjectUtil.isEmpty(user)) {
+                return Result.fail("用户不存在！");
+            }
+            // 获取密码
+            String password = user.getPassword();
+            if (!loginForm.getPassword().equals(password)) {
+                return Result.fail("密码错误！");
+            }
+
+            // 保存用户信息到Redis（要生成token作为key）
+            String token = UUID.randomUUID().toString();
+            UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+            Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(), CopyOptions.create()
+                .setIgnoreNullValue(true).setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
+            String loginToken = LOGIN_USER_KEY + token;
+            stringRedisTemplate.opsForHash().putAll(loginToken, userMap);
+            stringRedisTemplate.expire(loginToken, LOGIN_USER_TTL, TimeUnit.MINUTES);
+            // 返回token
+            return Result.ok(token);
+        } else {
+            return Result.fail("验证码或密码未填！");
         }
-        // 3.根据手机号查询用户是否存在
-        User user = query().eq("phone", phone).one();
-        if (ObjectUtil.isEmpty(user)) {
-            // 用户不存在则创建新用户
-            System.out.println("创建新用户");
-            user = createWithPhone(phone);
-        }
-
-        /*        // 4.保存用户信息到session
-        session.setAttribute("user",user);*/
-
-        // 4.保存用户信息到Redis（要生成token作为key）
-        String token = UUID.randomUUID().toString();
-        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
-        Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(), CopyOptions.create()
-            .setIgnoreNullValue(true).setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
-        String loginToken = LOGIN_USER_KEY + token;
-        stringRedisTemplate.opsForHash().putAll(loginToken, userMap);
-        stringRedisTemplate.expire(loginToken, LOGIN_USER_TTL, TimeUnit.MINUTES);
-        // 返回token
-        return Result.ok(token);
-
     }
 
     private User createWithPhone(String phone) {

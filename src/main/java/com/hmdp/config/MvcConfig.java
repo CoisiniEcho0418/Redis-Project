@@ -24,7 +24,8 @@ public class MvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         // 默认按照添加顺序执行拦截，也可以设置order（值越大优先级越低，越晚执行拦截）
         registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).addPathPatterns("/**").order(0);
-        registry.addInterceptor(new LoginInterceptor()).excludePathPatterns("/shop/**", "/voucher/**", "/shop-type/**",
-            "/upload/**", "/blog/hot", "/user/code", "/user/login").order(1);
+        registry.addInterceptor(new LoginInterceptor())
+            .excludePathPatterns("/shop/**", "/voucher/**", "/shop-type/**", "/blog/hot", "/user/code", "/user/login")
+            .order(1);
     }
 }
