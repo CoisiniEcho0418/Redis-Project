@@ -22,4 +22,24 @@ public class RedissonConfig {
         // 创建客户端
         return Redisson.create(config);
     }
+
+    @Bean
+    public RedissonClient redissonClient2() {
+        // 配置
+        Config config = new Config();
+        // 添加redis地址，这里添加了单点的地址也可以使用config.useClusterServers()添加集群地址
+        config.useSingleServer().setAddress("redis://127.0.0.1:6380");
+        // 创建客户端
+        return Redisson.create(config);
+    }
+
+    @Bean
+    public RedissonClient redissonClient3() {
+        // 配置
+        Config config = new Config();
+        // 添加redis地址，这里添加了单点的地址也可以使用config.useClusterServers()添加集群地址
+        config.useSingleServer().setAddress("redis://127.0.0.1:6381");
+        // 创建客户端
+        return Redisson.create(config);
+    }
 }
