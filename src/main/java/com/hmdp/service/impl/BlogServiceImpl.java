@@ -104,9 +104,9 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         /* 之所以要这样查是因为如果直接使用 listByIds() 来查询的话，Mybatis-Plus 底层调用的是 MySQL 的 in() 查询，此时
         返回的结果不会按照传入的 idList 的顺序返回，因而需要手动在后面指定 order by
         */
-        String sql = StrUtil.join(",", userIdList);
-        List<UserDTO> userDTOS = userService.query().in("id", userIdList).last("ORDER BY FIELD(id," + sql + ")").list()
-            .stream().map(user -> BeanUtil.copyProperties(user, UserDTO.class)).collect(Collectors.toList());
+        String idStr = StrUtil.join(",", userIdList);
+        List<UserDTO> userDTOS = userService.query().in("id", userIdList).last("ORDER BY FIELD(id," + idStr + ")")
+            .list().stream().map(user -> BeanUtil.copyProperties(user, UserDTO.class)).collect(Collectors.toList());
 
         return Result.ok(userDTOS);
     }
@@ -179,8 +179,8 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         之所以要这样查是因为如果直接使用 listByIds() 来查询的话，Mybatis-Plus 底层调用的是 MySQL 的 in() 查询，此时
         返回的结果不会按照传入的 idList 的顺序返回，因而需要手动在后面指定 order by
         */
-        String sql = StrUtil.join(",", blogIds);
-        List<Blog> blogList = query().in("id", blogIds).last("ORDER BY FIELD(id," + sql + ")").list();
+        String idStr = StrUtil.join(",", blogIds);
+        List<Blog> blogList = query().in("id", blogIds).last("ORDER BY FIELD(id," + idStr + ")").list();
         // 补全 blog 相关信息
         for (Blog blog : blogList) {
             // 查询 blog 相关用户数据

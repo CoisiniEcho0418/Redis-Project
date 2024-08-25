@@ -3,12 +3,15 @@ package com.hmdp.service.impl;
 import static com.hmdp.utils.RedisConstants.*;
 
 import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 
+import org.springframework.data.geo.*;
+import org.springframework.data.redis.connection.RedisGeoCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -205,9 +208,46 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             return Result.ok(page.getRecords());
         }
 
-        // TODO
+        // 2.计算分页参数
+        int from = (current - 1) * SystemConstants.DEFAULT_PAGE_SIZE;
+        int end = current * SystemConstants.DEFAULT_PAGE_SIZE;
 
-        return Result.ok();
+        // 3.查询redis、按照距离排序、分页。结果：shopId、distance
+        String key = SHOP_GEO_KEY + typeId;
+        // 定义中心点和半径
+        Point point = new Point(x, y);
+        // 定义圆形区域，半径为5公里
+        Circle circle = new Circle(point, new Distance(5, Metrics.KILOMETERS));
+        GeoResults<RedisGeoCommands.GeoLocation<String>> geoResults = stringRedisTemplate.opsForGeo().radius(key,
+            circle, RedisGeoCommands.GeoRadiusCommandArgs.newGeoRadiusArgs().limit(end).includeDistance());
+        if (ObjectUtil.isNull(geoResults)) {
+            return Result.ok(Collections.emptyList());
+        }
+
+        // 4.解析出id
+        List<GeoResult<RedisGeoCommands.GeoLocation<String>>> geoResultList = geoResults.getContent();
+        if (geoResultList.size() <= from) {
+            // 没有下一页，结束
+            return Result.ok(Collections.emptyList());
+        }
+        // 4.1.截取 from ~ end的部分
+        List<String> ids = new ArrayList<>();
+        Map<String, Double> geoMap = new HashMap<>();
+        geoResultList.stream().skip(from).forEach(geoLocationGeoResult -> {
+            // 4.2.获取店铺id和距离
+            String shopIdStr = geoLocationGeoResult.getContent().getName();
+            Double distance = geoLocationGeoResult.getDistance().getValue();
+            ids.add(shopIdStr);
+            geoMap.put(shopIdStr, distance);
+        });
+
+        // 5.根据id查询Shop
+        String idStr = StrUtil.join(",", ids);
+        List<Shop> shops = query().in("id", ids).last("ORDER BY FIELD(id," + idStr + ")").list();
+        for (Shop shop : shops) {
+            shop.setDistance(geoMap.get(shop.getId().toString()));
+        }
+        return Result.ok(shops);
     }
 
     private boolean tryLock(String key) {

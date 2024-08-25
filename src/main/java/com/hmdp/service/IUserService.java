@@ -9,7 +9,7 @@ import com.hmdp.entity.User;
 
 /**
  * <p>
- *  服务类
+ * 服务类
  * </p>
  *
  * @author 虎哥
@@ -20,4 +20,8 @@ public interface IUserService extends IService<User> {
     Result getCode(String phone, HttpSession session);
 
     Result login(LoginFormDTO loginForm, HttpSession session);
+
+    Result sign();
+
+    Result signCount();
 }

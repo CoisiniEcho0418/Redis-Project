@@ -2,13 +2,17 @@ package com.hmdp.service.impl;
 
 import static com.hmdp.utils.RedisConstants.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
 
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -22,9 +26,11 @@ import com.hmdp.service.IUserService;
 import com.hmdp.utils.RandomExpireTimeUtil;
 import com.hmdp.utils.RegexUtils;
 import com.hmdp.utils.SystemConstants;
+import com.hmdp.utils.UserHolder;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
@@ -127,6 +133,73 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         } else {
             return Result.fail("验证码或密码未填！");
         }
+    }
+
+    @Override
+    public Result sign() {
+        // 获取登录用户
+        UserDTO user = UserHolder.getUser();
+        if (ObjectUtil.isEmpty(user)) {
+            return Result.fail("用户未登录！");
+        }
+        Long userId = user.getId();
+
+        // 获取当前日期
+        LocalDateTime now = LocalDateTime.now();
+        // 获取今天是当前月的第几天
+        int offset = now.getDayOfMonth();
+        // 获取key后缀
+        String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyy/MM"));
+        // 拼接key
+        String key = USER_SIGN_KEY + userId + keySuffix;
+
+        // 存入redis bitMap
+        stringRedisTemplate.opsForValue().setBit(key, offset - 1, true);
+
+        return Result.ok();
+    }
+
+    @Override
+    public Result signCount() {
+        // 获取登录用户
+        UserDTO user = UserHolder.getUser();
+        if (ObjectUtil.isEmpty(user)) {
+            return Result.fail("用户未登录！");
+        }
+        Long userId = user.getId();
+
+        // 获取当前日期
+        LocalDateTime now = LocalDateTime.now();
+        // 获取今天是当前月的第几天
+        int offset = now.getDayOfMonth();
+        // 获取key后缀
+        String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyy/MM"));
+        // 拼接key
+        String key = USER_SIGN_KEY + userId + keySuffix;
+
+        // 获取本月截止今天为止的所有的签到记录，返回的是一个十进制的数字 BITFIELD sign:5:202203 GET u14 0
+        List<Long> resultList = stringRedisTemplate.opsForValue().bitField(key,
+            BitFieldSubCommands.create().get(BitFieldSubCommands.BitFieldType.unsigned(offset)).valueAt(0));
+        if (CollectionUtil.isEmpty(resultList)) {
+            // 没有任何签到结果
+            return Result.ok(0);
+        }
+
+        // 循环遍历
+        Long num = resultList.get(0);
+        int count = 0;
+        while (true) {
+            // 让这个数字与1做与运算，得到数字的最后一个bit位 // 判断这个bit位是否为0
+            if ((num & 1) == 0) {
+                // 如果为0，说明未签到，结束
+                break;
+            } else {
+                count++;
+            }
+            // // 把数字右移一位，抛弃最后一个bit位，继续下一个bit位
+            num >>>= 1;
+        }
+        return Result.ok(count);
     }
 
     private User createWithPhone(String phone) {
